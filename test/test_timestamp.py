@@ -1,40 +1,38 @@
-import pytest
-import sys
 import datetime
+
+import pytest
+
 import msgpack
 from msgpack.ext import Timestamp
-
-if sys.version_info[0] > 2:
-    from msgpack.ext import _utc
 
 
 def test_timestamp():
     # timestamp32
-    ts = Timestamp(2 ** 32 - 1)
+    ts = Timestamp(2**32 - 1)
     assert ts.to_bytes() == b"\xff\xff\xff\xff"
     packed = msgpack.packb(ts)
     assert packed == b"\xd6\xff" + ts.to_bytes()
     unpacked = msgpack.unpackb(packed)
     assert ts == unpacked
-    assert ts.seconds == 2 ** 32 - 1 and ts.nanoseconds == 0
+    assert ts.seconds == 2**32 - 1 and ts.nanoseconds == 0
 
     # timestamp64
-    ts = Timestamp(2 ** 34 - 1, 999999999)
+    ts = Timestamp(2**34 - 1, 999999999)
     assert ts.to_bytes() == b"\xee\x6b\x27\xff\xff\xff\xff\xff"
     packed = msgpack.packb(ts)
     assert packed == b"\xd7\xff" + ts.to_bytes()
     unpacked = msgpack.unpackb(packed)
     assert ts == unpacked
-    assert ts.seconds == 2 ** 34 - 1 and ts.nanoseconds == 999999999
+    assert ts.seconds == 2**34 - 1 and ts.nanoseconds == 999999999
 
     # timestamp96
-    ts = Timestamp(2 ** 63 - 1, 999999999)
+    ts = Timestamp(2**63 - 1, 999999999)
     assert ts.to_bytes() == b"\x3b\x9a\xc9\xff\x7f\xff\xff\xff\xff\xff\xff\xff"
     packed = msgpack.packb(ts)
     assert packed == b"\xc7\x0c\xff" + ts.to_bytes()
     unpacked = msgpack.unpackb(packed)
     assert ts == unpacked
-    assert ts.seconds == 2 ** 63 - 1 and ts.nanoseconds == 999999999
+    assert ts.seconds == 2**63 - 1 and ts.nanoseconds == 999999999
 
     # negative fractional
     ts = Timestamp.from_unix(-2.3)  # s: -3, ns: 700000000
@@ -85,33 +83,48 @@ def test_timestamp_to():
     assert t.to_unix_nano() == 42000014000
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_timestamp_datetime():
     t = Timestamp(42, 14)
-    assert t.to_datetime() == datetime.datetime(1970, 1, 1, 0, 0, 42, 0, tzinfo=_utc)
+    utc = datetime.timezone.utc
+    assert t.to_datetime() == datetime.datetime(1970, 1, 1, 0, 0, 42, 0, tzinfo=utc)
+
+    ts = datetime.datetime(2024, 4, 16, 8, 43, 9, 420317, tzinfo=utc)
+    ts2 = datetime.datetime(2024, 4, 16, 8, 43, 9, 420318, tzinfo=utc)
+
+    assert (
+        Timestamp.from_datetime(ts2).nanoseconds - Timestamp.from_datetime(ts).nanoseconds == 1000
+    )
+
+    ts3 = datetime.datetime(2024, 4, 16, 8, 43, 9, 4256)
+    ts4 = datetime.datetime(2024, 4, 16, 8, 43, 9, 4257)
+    assert (
+        Timestamp.from_datetime(ts4).nanoseconds - Timestamp.from_datetime(ts3).nanoseconds == 1000
+    )
+
+    assert Timestamp.from_datetime(ts).to_datetime() == ts
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_unpack_datetime():
     t = Timestamp(42, 14)
+    utc = datetime.timezone.utc
     packed = msgpack.packb(t)
     unpacked = msgpack.unpackb(packed, timestamp=3)
-    assert unpacked == datetime.datetime(1970, 1, 1, 0, 0, 42, 0, tzinfo=_utc)
+    assert unpacked == datetime.datetime(1970, 1, 1, 0, 0, 42, 0, tzinfo=utc)
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_pack_unpack_before_epoch():
-    t_in = datetime.datetime(1960, 1, 1, tzinfo=_utc)
+    utc = datetime.timezone.utc
+    t_in = datetime.datetime(1960, 1, 1, tzinfo=utc)
     packed = msgpack.packb(t_in, datetime=True)
     unpacked = msgpack.unpackb(packed, timestamp=3)
     assert unpacked == t_in
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_pack_datetime():
     t = Timestamp(42, 14000)
     dt = t.to_datetime()
-    assert dt == datetime.datetime(1970, 1, 1, 0, 0, 42, 14, tzinfo=_utc)
+    utc = datetime.timezone.utc
+    assert dt == datetime.datetime(1970, 1, 1, 0, 0, 42, 14, tzinfo=utc)
 
     packed = msgpack.packb(dt, datetime=True)
     packed2 = msgpack.packb(t)
@@ -131,10 +144,10 @@ def test_pack_datetime():
     assert msgpack.unpackb(packed) is None
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_issue451():
     # https://github.com/msgpack/msgpack-python/issues/451
-    dt = datetime.datetime(2100, 1, 1, 1, 1, tzinfo=_utc)
+    utc = datetime.timezone.utc
+    dt = datetime.datetime(2100, 1, 1, 1, 1, tzinfo=utc)
     packed = msgpack.packb(dt, datetime=True)
     assert packed == b"\xd6\xff\xf4\x86eL"
 
@@ -142,7 +155,6 @@ def test_issue451():
     assert dt == unpacked
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="datetime support is PY3+ only")
 def test_pack_datetime_without_tzinfo():
     dt = datetime.datetime(1970, 1, 1, 0, 0, 42, 14)
     with pytest.raises(ValueError, match="where tzinfo=None"):
@@ -152,7 +164,8 @@ def test_pack_datetime_without_tzinfo():
     packed = msgpack.packb(dt, datetime=True, default=lambda x: None)
     assert packed == msgpack.packb(None)
 
-    dt = datetime.datetime(1970, 1, 1, 0, 0, 42, 14, tzinfo=_utc)
+    utc = datetime.timezone.utc
+    dt = datetime.datetime(1970, 1, 1, 0, 0, 42, 14, tzinfo=utc)
     packed = msgpack.packb(dt, datetime=True)
     unpacked = msgpack.unpackb(packed, timestamp=3)
     assert unpacked == dt

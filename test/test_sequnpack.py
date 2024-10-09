@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# coding: utf-8
 import io
-from msgpack import Unpacker, BufferFull
-from msgpack import pack
-from msgpack.exceptions import OutOfData
+
 from pytest import raises
+
+from msgpack import BufferFull, Unpacker, pack, packb
+from msgpack.exceptions import OutOfData
 
 
 def test_partialdata():
@@ -78,6 +78,15 @@ def test_maxbuffersize():
     assert ord("b") == next(unpacker)
 
 
+def test_maxbuffersize_file():
+    buff = io.BytesIO(packb(b"a" * 10) + packb([b"a" * 20] * 2))
+    unpacker = Unpacker(buff, read_size=1, max_buffer_size=19, max_bin_len=20)
+    assert unpacker.unpack() == b"a" * 10
+    # assert unpacker.unpack() == [b"a" * 20]*2
+    with raises(BufferFull):
+        print(unpacker.unpack())
+
+
 def test_readbytes():
     unpacker = Unpacker(read_size=3)
     unpacker.feed(b"foobar")
@@ -118,8 +127,8 @@ def test_issue124():
 
 def test_unpack_tell():
     stream = io.BytesIO()
-    messages = [2 ** i - 1 for i in range(65)]
-    messages += [-(2 ** i) for i in range(1, 64)]
+    messages = [2**i - 1 for i in range(65)]
+    messages += [-(2**i) for i in range(1, 64)]
     messages += [
         b"hello",
         b"hello" * 1000,

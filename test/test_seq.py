@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
-
+# ruff: noqa: E501
+# ignore line length limit for long comments
 import io
-import msgpack
 
+import msgpack
 
 binarydata = bytes(bytearray(range(256)))
 
@@ -35,7 +34,7 @@ def test_exceeding_unpacker_read_size():
 
     read_count = 0
     for idx, o in enumerate(unpacker):
-        assert type(o) == bytes
+        assert isinstance(o, bytes)
         assert o == gen_binary_data(idx)
         read_count += 1
 

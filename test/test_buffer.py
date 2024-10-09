@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
+from pytest import raises
 
-import sys
-import pytest
-from msgpack import packb, unpackb
+from msgpack import Packer, packb, unpackb
 
 
-@pytest.mark.skipif(sys.version_info[0] == 2, reason="Python 2 is not supported")
 def test_unpack_buffer():
     from array import array
 
@@ -31,3 +27,23 @@ def test_unpack_memoryview():
     assert [b"foo", b"bar"] == obj
     expected_type = bytes
     assert all(type(s) == expected_type for s in obj)
+
+
+def test_packer_getbuffer():
+    packer = Packer(autoreset=False)
+    packer.pack_array_header(2)
+    packer.pack(42)
+    packer.pack("hello")
+    buffer = packer.getbuffer()
+    assert isinstance(buffer, memoryview)
+    assert bytes(buffer) == b"\x92*\xa5hello"
+
+    if Packer.__module__ == "msgpack._cmsgpack":  # only for Cython
+        # cython Packer supports buffer protocol directly
+        assert bytes(packer) == b"\x92*\xa5hello"
+
+        with raises(BufferError):
+            packer.pack(42)
+        buffer.release()
+        packer.pack(42)
+        assert bytes(packer) == b"\x92*\xa5hello*"

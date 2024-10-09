@@ -1,16 +1,12 @@
 #!/usr/bin/env python
-# coding: utf-8
-from __future__ import absolute_import, division, print_function, unicode_literals
 
+import struct
 from collections import OrderedDict
 from io import BytesIO
-import struct
-import sys
 
 import pytest
-from pytest import raises, xfail
 
-from msgpack import packb, unpackb, Unpacker, Packer, pack
+from msgpack import Packer, Unpacker, packb, unpackb
 
 
 def check(data, use_list=False):
@@ -80,13 +76,8 @@ def testPackByteArrays():
         check(td)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 0), reason="Python 2 passes invalid surrogates"
-)
 def testIgnoreUnicodeErrors():
-    re = unpackb(
-        packb(b"abc\xeddef", use_bin_type=False), raw=False, unicode_errors="ignore"
-    )
+    re = unpackb(packb(b"abc\xeddef", use_bin_type=False), raw=False, unicode_errors="ignore")
     assert re == "abcdef"
 
 
@@ -96,12 +87,9 @@ def testStrictUnicodeUnpack():
         unpackb(packed, raw=False, use_list=1)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 0), reason="Python 2 passes invalid surrogates"
-)
 def testIgnoreErrorsPack():
     re = unpackb(
-        packb("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
+        packb("abc\udc80\udcffdef", use_bin_type=True, unicode_errors="ignore"),
         raw=False,
         use_list=1,
     )
@@ -114,8 +102,8 @@ def testDecodeBinary():
 
 
 def testPackFloat():
-    assert packb(1.0, use_single_float=True) == b"\xca" + struct.pack(str(">f"), 1.0)
-    assert packb(1.0, use_single_float=False) == b"\xcb" + struct.pack(str(">d"), 1.0)
+    assert packb(1.0, use_single_float=True) == b"\xca" + struct.pack(">f", 1.0)
+    assert packb(1.0, use_single_float=False) == b"\xcb" + struct.pack(">d", 1.0)
 
 
 def testArraySize(sizes=[0, 5, 50, 1000]):
@@ -160,7 +148,7 @@ def testMapSize(sizes=[0, 5, 50, 1000]):
     bio.seek(0)
     unpacker = Unpacker(bio, strict_map_key=False)
     for size in sizes:
-        assert unpacker.unpack() == dict((i, i * 2) for i in range(size))
+        assert unpacker.unpack() == {i: i * 2 for i in range(size)}
 
 
 def test_odict():

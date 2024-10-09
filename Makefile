@@ -1,14 +1,28 @@
+PYTHON_SOURCES = msgpack test setup.py
+
 .PHONY: all
 all: cython
 	python setup.py build_ext -i -f
 
-.PHONY: black
-black:
-	black msgpack/ test/ setup.py
+.PHONY: format
+format:
+	ruff format $(PYTHON_SOURCES)
+
+.PHONY: lint
+lint:
+	ruff check $(PYTHON_SOURCES)
+
+.PHONY: doc
+doc:
+	cd docs && sphinx-build -n -v -W --keep-going -b html -d doctrees . html
+
+.PHONY: pyupgrade
+pyupgrade:
+	@find $(PYTHON_SOURCES) -name '*.py' -type f -exec pyupgrade --py37-plus '{}' \;
 
 .PHONY: cython
 cython:
-	cython --cplus msgpack/_cmsgpack.pyx
+	cython msgpack/_cmsgpack.pyx
 
 .PHONY: test
 test: cython
@@ -31,8 +45,9 @@ clean:
 
 .PHONY: update-docker
 update-docker:
-	docker pull quay.io/pypa/manylinux1_i686
-	docker pull quay.io/pypa/manylinux1_x86_64
+	docker pull quay.io/pypa/manylinux2014_i686
+	docker pull quay.io/pypa/manylinux2014_x86_64
+	docker pull quay.io/pypa/manylinux2014_aarch64
 
 .PHONY: linux-wheel
 linux-wheel:

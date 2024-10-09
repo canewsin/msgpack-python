@@ -1,3 +1,88 @@
+1.1.0
+=====
+
+Release Date: 2024-09-10
+
+* use ``PyLong_*`` instead of ``PyInt_*`` for compatibility with
+  future Cython. (#620)
+
+1.1.0rc2
+========
+
+Release Date: 2024-08-19
+
+* Update Cython to 3.0.11 for better Python 3.13 support.
+* Update cibuildwheel to 2.20.0 to build Python 3.13 wheels.
+
+1.1.0rc1
+========
+
+Release Date: 2024-05-07
+
+* Update Cython to 3.0.10 to reduce C warnings and future support for Python 3.13.
+* Stop using C++ mode in Cython to reduce compile error on some compilers.
+* ``Packer()`` has ``buf_size`` option to specify initial size of
+  internal buffer to reduce reallocation.
+* The default internal buffer size of ``Packer()`` is reduced from
+  1MiB to 256KiB to optimize for common use cases. Use ``buf_size``
+  if you are packing large data.
+* ``Timestamp.to_datetime()`` and ``Timestamp.from_datetime()`` become
+  more accurate by avoiding floating point calculations. (#591)
+* The Cython code for ``Unpacker`` has been slightly rewritten for maintainability.
+* The fallback implementation of ``Packer()`` and ``Unpacker()`` now uses keyword-only
+  arguments to improve compatibility with the Cython implementation.
+
+1.0.8
+=====
+
+Release Date: 2024-03-01
+
+* Update Cython to 3.0.8. This fixes memory leak when iterating
+  ``Unpacker`` object on Python 3.12.
+* Do not include C/Cython files in binary wheels.
+
+
+1.0.7
+=====
+
+Release Date: 2023-09-28
+
+* Fix build error of extension module on Windows. (#567)
+* ``setup.py`` doesn't skip build error of extension module. (#568)
+
+
+1.0.6
+=====
+
+Release Date: 2023-09-21
+
+.. note::
+   v1.0.6 Wheels for Windows don't contain extension module.
+   Please upgrade to v1.0.7 or newer.
+
+* Add Python 3.12 wheels (#517)
+* Remove Python 2.7, 3.6, and 3.7 support
+
+
+1.0.5
+=====
+
+Release Date: 2023-03-08
+
+* Use ``__BYTE_ORDER__`` instead of ``__BYTE_ORDER`` for portability. (#513, #514)
+* Add Python 3.11 wheels (#517)
+* fallback: Fix packing multidimensional memoryview (#527)
+
+1.0.4
+=====
+
+Release Date: 2022-06-03
+
+* Support Python 3.11 (beta).
+* Don't define `__*_ENDIAN__` macro on Unix. by @methane in https://github.com/msgpack/msgpack-python/pull/495
+* Use PyFloat_Pack8() on Python 3.11a7 by @vstinner in https://github.com/msgpack/msgpack-python/pull/499
+* Fix Unpacker max_buffer_length handling by @methane in https://github.com/msgpack/msgpack-python/pull/506
+
 1.0.3
 =====
 
@@ -79,7 +164,7 @@ Important changes
 * unpacker: Default value of input limits are smaller than before to avoid DoS attack.
   If you need to handle large data, you need to specify limits manually. (#319)
 
-* Unpacker doesn't wrap underlaying ``ValueError`` (including ``UnicodeError``) into
+* Unpacker doesn't wrap underlying ``ValueError`` (including ``UnicodeError``) into
   ``UnpackValueError``.  If you want to catch all exception during unpack, you need
   to use ``try ... except Exception`` with minimum try code block. (#323, #233)
 

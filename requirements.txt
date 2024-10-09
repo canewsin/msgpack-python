@@ -1,2 +1,1 @@
-# Also declared in pyproject.toml, if updating here please also update there
-Cython~=0.29.13
+Cython~=3.0.11

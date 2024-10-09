@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-from pytest import raises
-from msgpack import packb, unpackb, Unpacker, FormatError, StackError, OutOfData
 
 import datetime
+
+from pytest import raises
+
+from msgpack import FormatError, OutOfData, StackError, Unpacker, packb, unpackb
 
 
 class DummyException(Exception):
@@ -53,7 +53,7 @@ def test_invalidvalue():
 
 
 def test_strict_map_key():
-    valid = {u"unicode": 1, b"bytes": 2}
+    valid = {"unicode": 1, b"bytes": 2}
     packed = packb(valid, use_bin_type=True)
     assert valid == unpackb(packed, raw=False, strict_map_key=True)
 

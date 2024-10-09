@@ -1,5 +1,5 @@
-from __future__ import print_function
 import array
+
 import msgpack
 from msgpack import ExtType
 
@@ -17,9 +17,7 @@ def test_pack_ext_type():
     assert p(b"A" * 16) == b"\xd8\x42" + b"A" * 16  # fixext 16
     assert p(b"ABC") == b"\xc7\x03\x42ABC"  # ext 8
     assert p(b"A" * 0x0123) == b"\xc8\x01\x23\x42" + b"A" * 0x0123  # ext 16
-    assert (
-        p(b"A" * 0x00012345) == b"\xc9\x00\x01\x23\x45\x42" + b"A" * 0x00012345
-    )  # ext 32
+    assert p(b"A" * 0x00012345) == b"\xc9\x00\x01\x23\x45\x42" + b"A" * 0x00012345  # ext 32
 
 
 def test_unpack_ext_type():
@@ -49,16 +47,13 @@ def test_extension_type():
             except AttributeError:
                 data = obj.tostring()
             return ExtType(typecode, data)
-        raise TypeError("Unknown type object %r" % (obj,))
+        raise TypeError(f"Unknown type object {obj!r}")
 
     def ext_hook(code, data):
         print("ext_hook called", code, data)
         assert code == 123
         obj = array.array("d")
-        try:
-            obj.frombytes(data)
-        except AttributeError:  # PY2
-            obj.fromstring(data)
+        obj.frombytes(data)
         return obj
 
     obj = [42, b"hello", array.array("d", [1.1, 2.2, 3.3])]
@@ -67,20 +62,14 @@ def test_extension_type():
     assert obj == obj2
 
 
-import sys
-
-if sys.version > "3":
-    long = int
-
-
 def test_overriding_hooks():
     def default(obj):
-        if isinstance(obj, long):
+        if isinstance(obj, int):
             return {"__type__": "long", "__data__": str(obj)}
         else:
             return obj
 
-    obj = {"testval": long(1823746192837461928374619)}
+    obj = {"testval": 1823746192837461928374619}
     refobj = {"testval": default(obj["testval"])}
     refout = msgpack.packb(refobj)
     assert isinstance(refout, (str, bytes))

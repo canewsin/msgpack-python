@@ -35,7 +35,7 @@ cdef extern from "unpack.h":
         PyObject* timestamp_t
         PyObject *giga;
         PyObject *utc;
-        char *unicode_errors
+        const char *unicode_errors
         Py_ssize_t max_str_len
         Py_ssize_t max_bin_len
         Py_ssize_t max_array_len
@@ -210,14 +210,14 @@ def unpackb(object packed, *, object object_hook=None, object list_hook=None,
     raise ValueError("Unpack failed: error = %d" % (ret,))
 
 
-cdef class Unpacker(object):
+cdef class Unpacker:
     """Streaming unpacker.
 
     Arguments:
 
     :param file_like:
         File-like object having `.read(n)` method.
-        If specified, unpacker reads serialized data from it and :meth:`feed()` is not usable.
+        If specified, unpacker reads serialized data from it and `.feed()` is not usable.
 
     :param int read_size:
         Used as `file_like.read(read_size)`. (default: `min(16*1024, max_buffer_size)`)
@@ -236,17 +236,17 @@ cdef class Unpacker(object):
             0 - Timestamp
             1 - float  (Seconds from the EPOCH)
             2 - int  (Nanoseconds from the EPOCH)
-            3 - datetime.datetime  (UTC).  Python 2 is not supported.
+            3 - datetime.datetime  (UTC).
 
     :param bool strict_map_key:
         If true (default), only str or bytes are accepted for map (dict) keys.
 
-    :param callable object_hook:
+    :param object_hook:
         When specified, it should be callable.
         Unpacker calls it with a dict argument after unpacking msgpack map.
         (See also simplejson)
 
-    :param callable object_pairs_hook:
+    :param object_pairs_hook:
         When specified, it should be callable.
         Unpacker calls it with a list of key-value pairs after unpacking msgpack map.
         (See also simplejson)
@@ -440,34 +440,30 @@ cdef class Unpacker(object):
         self.buf_size = buf_size
         self.buf_tail = tail + _buf_len
 
-    cdef read_from_file(self):
-        next_bytes = self.file_like_read(
-                min(self.read_size,
-                    self.max_buffer_size - (self.buf_tail - self.buf_head)
-                    ))
+    cdef int read_from_file(self) except -1:
+        cdef Py_ssize_t remains = self.max_buffer_size - (self.buf_tail - self.buf_head)
+        if remains <= 0:
+            raise BufferFull
+
+        next_bytes = self.file_like_read(min(self.read_size, remains))
         if next_bytes:
             self.append_buffer(PyBytes_AsString(next_bytes), PyBytes_Size(next_bytes))
         else:
             self.file_like = None
+        return 0
 
     cdef object _unpack(self, execute_fn execute, bint iter=0):
         cdef int ret
         cdef object obj
         cdef Py_ssize_t prev_head
 
-        if self.buf_head >= self.buf_tail and self.file_like is not None:
-            self.read_from_file()
-
         while 1:
             prev_head = self.buf_head
-            if prev_head >= self.buf_tail:
-                if iter:
-                    raise StopIteration("No more data to unpack.")
-                else:
-                    raise OutOfData("No more data to unpack.")
-
-            ret = execute(&self.ctx, self.buf, self.buf_tail, &self.buf_head)
-            self.stream_offset += self.buf_head - prev_head
+            if prev_head < self.buf_tail:
+                ret = execute(&self.ctx, self.buf, self.buf_tail, &self.buf_head)
+                self.stream_offset += self.buf_head - prev_head
+            else:
+                ret = 0
 
             if ret == 1:
                 obj = unpack_data(&self.ctx)
